@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\User;
 use App\Notifications\MissingPersonNotification;
-use App\Services\NotificationCleanupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -175,10 +174,6 @@ class PostController extends Controller
 
         $postTitle = $post->title;
 
-        // Get count of affected notifications before deletion
-        $affectedNotifications = NotificationCleanupService::getAffectedNotifications($post);
-        $notificationCount = $affectedNotifications->count();
-
         // Delete associated images
         if ($post->images) {
             foreach ($post->images as $image) {
@@ -189,12 +184,7 @@ class PostController extends Controller
         // Delete the post (this will trigger the model's boot method to clean up related data)
         $post->delete();
 
-        $message = "Post '{$postTitle}' deleted successfully!";
-        if ($notificationCount > 0) {
-            $message .= " Also cleaned up {$notificationCount} related notification(s).";
-        }
-
-        return redirect()->route('posts.index')->with('success', $message);
+        return redirect()->route('posts.index')->with('success', "Post '{$postTitle}' deleted successfully!");
     }
 
     /**
@@ -279,13 +269,8 @@ class PostController extends Controller
                     ->get();
 
         $deletedCount = 0;
-        $totalNotifications = 0;
 
         foreach ($posts as $post) {
-            // Count notifications before deletion
-            $affectedNotifications = NotificationCleanupService::getAffectedNotifications($post);
-            $totalNotifications += $affectedNotifications->count();
-
             // Delete associated images
             if ($post->images) {
                 foreach ($post->images as $image) {
@@ -296,11 +281,6 @@ class PostController extends Controller
             $deletedCount++;
         }
 
-        $message = "Successfully deleted {$deletedCount} post(s).";
-        if ($totalNotifications > 0) {
-            $message .= " Also cleaned up {$totalNotifications} related notification(s).";
-        }
-
-        return redirect()->route('posts.my-posts')->with('success', $message);
+        return redirect()->route('posts.my-posts')->with('success', "Successfully deleted {$deletedCount} post(s).");
     }
 }
